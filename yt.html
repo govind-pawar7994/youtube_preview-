@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        :root {
+            --bg-color: #1a1a1a;
+            --section-bg: #2d2d2d;
+            --accent-color: #4285f4;
+            --text-color: #ffffff;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            font-family: 'Segoe UI', sans-serif;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 30px auto;
+            padding: 20px;
+        }
+
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .section {
+            background: var(--section-bg);
+            border-radius: 12px;
+            padding: 20px;
+            position: relative;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s;
+        }
+
+        .section:hover {
+            transform: translateY(-2px);
+        }
+
+        .remove-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #ff4444;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.2s;
+        }
+
+        .remove-btn:hover {
+            background: #cc0000;
+        }
+
+        .add-btn, .control-all-btn {
+            background: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        .add-btn:hover, .control-all-btn:hover {
+            background: #357abd;
+            transform: scale(1.05);
+        }
+
+        .bulk-input-container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .bulk-input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #404040;
+            border-radius: 8px;
+            font-size: 14px;
+            background: #1a1a1a;
+            color: white;
+            transition: border-color 0.2s;
+        }
+
+        .bulk-input:focus {
+            border-color: var(--accent-color);
+            outline: none;
+        }
+
+        .url-input-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 15px 0;
+        }
+
+        .url-input {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid #404040;
+            border-radius: 8px;
+            font-size: 14px;
+            background: #1a1a1a;
+            color: white;
+            transition: border-color 0.2s;
+        }
+
+        .url-input:focus {
+            border-color: var(--accent-color);
+            outline: none;
+        }
+
+        .preview-container {
+            position: relative;
+            width: 100%;
+            padding-bottom: 56.25%;
+            margin-top: 15px;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .preview-iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: none;
+            background: #000;
+        }
+
+        .section-header {
+            font-size: 18px;
+            margin-bottom: 15px;
+            color: var(--accent-color);
+            font-weight: 600;
+        }
+
+        @media (max-width: 1200px) {
+            .grid-container {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .grid-container {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="bulk-input-container">
+            <textarea class="bulk-input" id="bulkInput" rows="5" placeholder="Paste YouTube URLs here, one per line"></textarea>
+            <button class="add-btn" onclick="addBulkSections()">
+                <span>+</span> Add Sections
+            </button>
+        </div>
+        <button class="control-all-btn" onclick="playAllVideos()">
+            Play All Videos
+        </button>
+        <button class="control-all-btn" onclick="pauseAllVideos()">
+            Pause All Videos
+        </button>
+        <button class="control-all-btn" onclick="removeAllSections()">
+            Remove All Sections
+        </button>
+        <div class="grid-container" id="sectionsContainer"></div>
+    </div>
+
+    <script>
+        let sectionCount = 0;
+
+        function addSection(url = '') {
+            sectionCount++;
+            const section = document.createElement('div');
+            section.className = 'section';
+            section.innerHTML = `
+                <button class="remove-btn" onclick="this.parentElement.remove()">×</button>
+                <div class="section-header">Section ${sectionCount}</div>
+                <div class="url-input-container">
+                    <input type="url" class="url-input" placeholder="Paste YouTube URL here"
+                        oninput="updatePreview(this)"
+                        value="${url}"
+                        pattern="^(https?\:\/\/)?(www\.)?(youtube\.com|youtu\.?be)\/.+">
+                    <button class="control-btn" onclick="updatePreview(this.previousElementSibling)">Preview</button>
+                </div>
+                <div class="preview-container"></div>
+            `;
+            document.getElementById('sectionsContainer').appendChild(section);
+            if (url) {
+                updatePreview(section.querySelector('.url-input'));
+            }
+        }
+
+        function addBulkSections() {
+            const bulkInput = document.getElementById('bulkInput').value.trim();
+            const urls = bulkInput.split('\n').map(url => url.trim()).filter(url => url);
+            urls.forEach(url => addSection(url));
+        }
+
+        function updatePreview(input) {
+            const container = input.parentElement.nextElementSibling;
+            const url = input.value.trim();
+            const videoId = getYouTubeId(url);
+5
+            if (videoId) {
+                container.innerHTML = `
+                    <iframe class="preview-iframe" 
+                        src="https://www.youtube.com/embed/${videoId}?enablejsapi=1&autoplay=1" 
+                        allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture"
+                        allowfullscreen>
+                    </iframe>
+                `;
+            } else if (url) {
+                container.innerHTML = '<div style="color: #ff4444; padding: 10px">Invalid YouTube URL</div>';
+            } else {
+                container.innerHTML = '';
+            }
+        }
+
+        function getYouTubeId(url) {
+            const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+            const match = url.match(regExp);
+            return (match && match[2].length === 11) ? match[2] : null;
+        }
+
+        function playAllVideos() {
+            const iframes = document.querySelectorAll('.preview-iframe');
+            iframes.forEach(iframe => {
+                iframe.contentWindow.postMessage('{"event":"command","func":"playVideo","args":""}', '*');
+            });
+        }
+
+        function pauseAllVideos() {
+            const iframes = document.querySelectorAll('.preview-iframe');
+            iframes.forEach(iframe => {
+                iframe.contentWindow.postMessage('{"event":"command","func":"pauseVideo","args":""}', '*');
+            });
+        }
+
+        function removeAllSections() {
+            const sectionsContainer = document.getElementById('sectionsContainer');
+            sectionsContainer.innerHTML = '';
+            sectionCount = 0;
+        }
+
+        // Add an initial section
+        addSection();
+    </script>
+</body>
+</html>
